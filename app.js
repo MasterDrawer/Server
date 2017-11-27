@@ -4,7 +4,8 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var socketio = require('./socket');
+var http2 = require('http').Server(express);
+var io = require('socket.io')(http2);
 require('./database_connector');
 
 var gameRouter = require('./routes/game');
@@ -38,5 +39,15 @@ app.use(function (err, req, res, next) {
     res.status(err.status || 500);
     res.send('failure');
 });
+
+
+io.on('connection', function(socket){
+    console.log('a user connected');
+    socket.on('updated color', function(newColor){
+        console.log('updated color to: ' + newColor)
+    })
+});
+
+
 
 module.exports = app;
