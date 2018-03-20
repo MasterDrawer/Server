@@ -1,29 +1,78 @@
 var app = require('express')();
+var bodyParser = require('body-parser');
+var	methodOverride = require('method-override');
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
-var db = require('./database_connector')(app);
+var restful = require('node-restful');
+var mongoose = restful.mongoose;
 
+var connectionString = "mongodb://drawnuts:1q2w3e$R@ds115546.mlab.com:15546/draw_nuts";
+mongoose.useMongoClient = true;
+mongoose.connect(connectionString);
+
+
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+
+db.once('open', function () {
+	console.log("DB connection alive");
+});
 server.listen(1234);
 
-app.get('/', function (req, res) {
-	res.sendfile(__dirname + '/index.html');
+app.use(bodyParser.urlencoded({'extended':'true'}));
+app.use(bodyParser.json());
+app.use(bodyParser.json({type:'application/vnd.api+json'}));
+app.use(methodOverride());
+
+// app.get('/', function (req, res) {
+// 	res.sendfile(__dirname + '/index.html');
+// });
+
+
+
+var Game = app.resource = restful.model('game', mongoose.Schema({
+	title: String,
+	state: String
+})).methods(['get', 'post', 'put', 'delete']);
+
+var User = app.resource = restful.model('user', mongoose.Schema({
+	username: String,
+	password: String
+})).methods(['get', 'post', 'put', 'delete']);
+
+User.route('login', function(req, res) {
+	var loginUser = User.find(
+		{
+			userName: req.userName,
+			password: req.password
+		});
+	if(!!loginUser)
+		res.send(false);
+	res.send(true);
 });
+
+User.register(app, '/user');
+Game.register(app, '/game');
+
 
 io.on('connection', function (socket) {
+	debugger;
 	console.log("user connected");
-	socket.on('updated color', function (data) {
-		console.log(data);
+	socket.on('GetGames', function(tempSocket){
+		debugger;
+		Game.find({"state": "Open"}, function(err,games){
+			var x = games[0].state;
+			var y = games[0].title;
+			debugger;
+			socket.emit("GetGames2",games);
+
+		});
+
 	});
+	// socket.on('updated color', function (data) {
+	// 	console.log(data);
+	// });
 });
 
-
-db.game.insert({title: "Mako-Game", state:"Open"});
-db.game.insert({title: "Mako-Kofiko", state:"Closed"});
-
-
-io.on('GetGames', function(socket){
-	var openGames = db.Game.find({state: "Open"});
-	io.emit(openGames);
-});
-
+app.listen("8000");
 module.exports = app;
