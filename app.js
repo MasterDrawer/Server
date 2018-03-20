@@ -56,16 +56,14 @@ Game.register(app, '/game');
 
 
 io.on('connection', function (socket) {
-	debugger;
 	console.log("user connected");
 	socket.on('GetGames', function(tempSocket){
-		debugger;
+		console.log("user requested games");
 		Game.find({"state": "Open"}, function(err,games){
 			var x = games[0].state;
 			var y = games[0].title;
-			debugger;
 			socket.emit("GetGames2",games);
-
+			console.log("server responsed games");
 		});
 
 	});
